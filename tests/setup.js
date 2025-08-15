@@ -21,5 +21,10 @@ process.env.NODE_ENV = 'test';
 process.env.DATABASE_PATH = ':memory:';
 process.env.PORT = '3001';
 
+// Ensure API key is available for tests (use dummy key if not configured)
+if (!process.env.MISTRAL_API_KEY) {
+  process.env.MISTRAL_API_KEY = 'test-api-key-for-unit-tests';
+}
+
 // Extend Jest timeout for integration tests
 jest.setTimeout(60000);
