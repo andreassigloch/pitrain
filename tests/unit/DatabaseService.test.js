@@ -183,9 +183,12 @@ describe('DatabaseService Unit Tests', () => {
 
     test('should handle missing data in storeEvaluation', async () => {
       const invalidData = {
-        // Missing required fields
-        kpi_scores: {},
-        proposals: []
+        // Missing required fields - this should fail validation
+        duration: null,
+        kpi_scores: null,
+        proposals: [],
+        word_count: null,
+        timestamp: null
       };
 
       await expect(
