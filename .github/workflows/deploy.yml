@@ -1,0 +1,113 @@
+name: Deploy PitchTrainer to IONOS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run unit tests
+        run: npm run test:unit
+        env:
+          CI: true
+      
+      - name: Run integration tests
+        run: npm run test:integration
+        env:
+          CI: true
+          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+      
+      - name: Build application
+        run: npm run build
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Deploy to IONOS Server
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.IONOS_SSH_PRIVATE_KEY }}
+          SERVER_HOST: ${{ secrets.IONOS_SERVER_HOST }}
+          SERVER_USER: ${{ secrets.IONOS_SSH_USER }}
+          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+        run: |
+          # Setup SSH
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H $SERVER_HOST >> ~/.ssh/known_hosts
+          
+          # Deploy to server
+          ssh -i ~/.ssh/deploy_key $SERVER_USER@$SERVER_HOST << 'EOF'
+            set -e
+            cd ~/pitrain
+            
+            # Pull latest code
+            git fetch origin
+            git reset --hard origin/main
+            
+            # Update environment
+            echo "MISTRAL_API_KEY=${{ secrets.MISTRAL_API_KEY }}" > .env.production
+            echo "NODE_ENV=production" >> .env.production
+            echo "PORT=3000" >> .env.production
+            echo "DATABASE_PATH=/data/pitrain.db" >> .env.production
+            echo "ALLOWED_ORIGINS=https://pitrain.waffelwurst.de" >> .env.production
+            echo "MISTRAL_TRANSCRIPTION_MODEL=voxtral-mini-latest" >> .env.production
+            echo "MISTRAL_EVALUATION_MODEL=mistral-small-latest" >> .env.production
+            
+            # Build and restart container
+            docker-compose build pitrain
+            docker-compose up -d pitrain
+            
+            # Reload nginx proxy
+            docker-compose exec nginx-proxy nginx -s reload || true
+            
+            echo "✅ Deployment complete"
+          EOF
+
+  verify:
+    needs: deploy
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Verify Deployment
+        run: |
+          echo "🔍 Checking deployment health..."
+          
+          # Wait for service to start
+          sleep 30
+          
+          # Check health endpoint
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://pitrain.waffelwurst.de/health || echo "000")
+          
+          if [ "$response" = "200" ]; then
+            echo "✅ Deployment successful! Health check passed."
+          else
+            echo "❌ Deployment verification failed. HTTP status: $response"
+            exit 1
+          fi
+          
+          # Check API endpoint
+          api_response=$(curl -s -o /dev/null -w "%{http_code}" https://pitrain.waffelwurst.de/api/statistics || echo "000")
+          
+          if [ "$api_response" = "200" ]; then
+            echo "✅ API endpoints responding correctly."
+          else
+            echo "⚠️  API endpoint check failed. HTTP status: $api_response"
+            # Don't fail the build for API issues
+          fi

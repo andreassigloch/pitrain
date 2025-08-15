@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:docs.mistral.ai)",
+      "Bash(npm init:*)",
+      "Bash(mkdir:*)",
+      "Bash(cp:*)",
+      "Bash(npm install)",
+      "Bash(npm install:*)",
+      "Bash(npm run test:unit:*)",
+      "Bash(npm run test:integration:*)",
+      "Bash(npm run test:system:*)",
+      "Bash(git init:*)",
+      "Bash(git branch:*)",
+      "Bash(touch:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": []
+  }
+}
