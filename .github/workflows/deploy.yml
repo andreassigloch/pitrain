@@ -46,8 +46,8 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H $SERVER_HOST >> ~/.ssh/known_hosts
           
-          # Deploy to server
-          ssh -i ~/.ssh/deploy_key $SERVER_USER@$SERVER_HOST << 'EOF'
+          # Deploy to server  
+          ssh -i ~/.ssh/deploy_key $SERVER_USER@$SERVER_HOST "
             set -e
             
             # Create project directory if it doesn't exist
@@ -55,7 +55,7 @@ jobs:
             cd ~/pitrain
             
             # Clone or update repository
-            if [ ! -d ".git" ]; then
+            if [ ! -d '.git' ]; then
               git clone https://github.com/andreassigloch/pitrain.git .
             else
               git fetch origin
@@ -63,22 +63,20 @@ jobs:
             fi
             
             # Create production environment file
-            cat > .env.production << 'ENVEOF'
-MISTRAL_API_KEY=${{ secrets.MISTRAL_API_KEY }}
-NODE_ENV=production
-PORT=3000
-DATABASE_PATH=/data/pitrain.db
-ALLOWED_ORIGINS=https://pitrain.waffelwurst.de
-MISTRAL_TRANSCRIPTION_MODEL=voxtral-mini-latest
-MISTRAL_EVALUATION_MODEL=mistral-small-latest
-MISTRAL_BASE_URL=https://api.mistral.ai/v1
-MAX_AUDIO_DURATION=900
-MAX_FILE_SIZE=10485760
-REQUEST_TIMEOUT=30000
-RATE_LIMIT_WINDOW=900000
-RATE_LIMIT_MAX_REQUESTS=100
-LOG_LEVEL=info
-ENVEOF
+            echo 'MISTRAL_API_KEY=${{ secrets.MISTRAL_API_KEY }}' > .env.production
+            echo 'NODE_ENV=production' >> .env.production
+            echo 'PORT=3000' >> .env.production
+            echo 'DATABASE_PATH=/data/pitrain.db' >> .env.production
+            echo 'ALLOWED_ORIGINS=https://pitrain.waffelwurst.de' >> .env.production
+            echo 'MISTRAL_TRANSCRIPTION_MODEL=voxtral-mini-latest' >> .env.production
+            echo 'MISTRAL_EVALUATION_MODEL=mistral-small-latest' >> .env.production
+            echo 'MISTRAL_BASE_URL=https://api.mistral.ai/v1' >> .env.production
+            echo 'MAX_AUDIO_DURATION=900' >> .env.production
+            echo 'MAX_FILE_SIZE=10485760' >> .env.production
+            echo 'REQUEST_TIMEOUT=30000' >> .env.production
+            echo 'RATE_LIMIT_WINDOW=900000' >> .env.production
+            echo 'RATE_LIMIT_MAX_REQUESTS=100' >> .env.production
+            echo 'LOG_LEVEL=info' >> .env.production
             
             # Create data directory
             mkdir -p ./data
@@ -111,7 +109,8 @@ ENVEOF
             
             # Create NGINX config if it doesn't exist
             if [ ! -f /etc/nginx/sites-enabled/pitrain.conf ]; then
-              sudo tee /etc/nginx/sites-enabled/pitrain.conf > /dev/null << 'NGINXEOF'
+              echo 'Creating NGINX configuration...'
+              sudo bash -c 'cat > /etc/nginx/sites-enabled/pitrain.conf << END
 server {
     listen 80;
     server_name pitrain.waffelwurst.de;
@@ -142,14 +141,14 @@ server {
         client_max_body_size 10M;
     }
 }
-NGINXEOF
+END'
               
               # Test and reload NGINX
               sudo nginx -t && sudo systemctl reload nginx
             fi
             
-            echo "✅ Deployment complete"
-          EOF
+            echo '✅ Deployment complete'
+          "
 
   verify:
     needs: deploy
