@@ -54,3 +54,4 @@ The deployment correctly connects to `waffelwurst_frontend` network to work with
 1. **Container not starting**: `docker logs pitrain_app`
 2. **NGINX issues**: Check MultiServer logs with `docker-compose logs nginx-proxy`
 3. **Network issues**: Verify container is on `waffelwurst_frontend` network
+4. **SSH issues**: Verify GitHub secrets are correctly configured
