@@ -6,7 +6,7 @@
 echo "🔧 Setting up NGINX configuration for PitchTrainer with MultiServer..."
 
 # Check if MultiServer directory exists
-MULTISERVER_DIR="/home/ionos/MultiServer/MultiServer"
+MULTISERVER_DIR="$HOME/MultiServer"
 
 if [ ! -d "$MULTISERVER_DIR" ]; then
     echo "❌ MultiServer directory not found at $MULTISERVER_DIR"
