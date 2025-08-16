@@ -19,7 +19,7 @@ jobs:
         run: npm ci
       
       - name: Run unit tests only (fast, no external deps)
-        run: npm run test:unit
+        run: npm run test:ci
         env:
           CI: true
       
@@ -46,109 +46,78 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H $SERVER_HOST >> ~/.ssh/known_hosts
           
-          # Deploy to server  
-          ssh -i ~/.ssh/deploy_key $SERVER_USER@$SERVER_HOST "
-            set -e
+          # Create deployment script
+          cat > deploy.sh << 'SCRIPT'
+          set -e
+          echo "🚀 Starting PitchTrainer deployment..."
+          
+          # Create project directory if it doesn't exist
+          mkdir -p ~/pitrain
+          cd ~/pitrain
+          
+          # Clone or update repository
+          if [ ! -d '.git' ]; then
+            git clone https://github.com/andreassigloch/pitrain.git .
+          else
+            git fetch origin
+            git reset --hard origin/main
+          fi
+          
+          # Create production environment file
+          cat > .env.production << ENV
+          MISTRAL_API_KEY=${MISTRAL_API_KEY}
+          NODE_ENV=production
+          PORT=3000
+          DATABASE_PATH=/data/pitrain.db
+          ALLOWED_ORIGINS=https://pitrain.waffelwurst.de
+          MISTRAL_TRANSCRIPTION_MODEL=voxtral-mini-latest
+          MISTRAL_EVALUATION_MODEL=mistral-small-latest
+          MISTRAL_BASE_URL=https://api.mistral.ai/v1
+          MAX_AUDIO_DURATION=900
+          MAX_FILE_SIZE=10485760
+          REQUEST_TIMEOUT=30000
+          RATE_LIMIT_WINDOW=900000
+          RATE_LIMIT_MAX_REQUESTS=100
+          LOG_LEVEL=info
+          ENV
+          
+          # Create data directory
+          mkdir -p ./data
+          
+          # Build Docker image
+          docker build -t pitrain:latest .
+          
+          # Stop and remove existing container
+          docker stop pitrain_app 2>/dev/null || true
+          docker rm pitrain_app 2>/dev/null || true
+          
+          # Start new container
+          docker run -d \
+            --name pitrain_app \
+            --restart unless-stopped \
+            -p 3000:3000 \
+            --env-file .env.production \
+            -v "$(pwd)/data:/data" \
+            --network waffelwurst_frontend \
+            pitrain:latest
             
-            # Create project directory if it doesn't exist
-            mkdir -p ~/pitrain
-            cd ~/pitrain
-            
-            # Clone or update repository
-            if [ ! -d '.git' ]; then
-              git clone https://github.com/andreassigloch/pitrain.git .
-            else
-              git fetch origin
-              git reset --hard origin/main
-            fi
-            
-            # Create production environment file
-            echo 'MISTRAL_API_KEY=${{ secrets.MISTRAL_API_KEY }}' > .env.production
-            echo 'NODE_ENV=production' >> .env.production
-            echo 'PORT=3000' >> .env.production
-            echo 'DATABASE_PATH=/data/pitrain.db' >> .env.production
-            echo 'ALLOWED_ORIGINS=https://pitrain.waffelwurst.de' >> .env.production
-            echo 'MISTRAL_TRANSCRIPTION_MODEL=voxtral-mini-latest' >> .env.production
-            echo 'MISTRAL_EVALUATION_MODEL=mistral-small-latest' >> .env.production
-            echo 'MISTRAL_BASE_URL=https://api.mistral.ai/v1' >> .env.production
-            echo 'MAX_AUDIO_DURATION=900' >> .env.production
-            echo 'MAX_FILE_SIZE=10485760' >> .env.production
-            echo 'REQUEST_TIMEOUT=30000' >> .env.production
-            echo 'RATE_LIMIT_WINDOW=900000' >> .env.production
-            echo 'RATE_LIMIT_MAX_REQUESTS=100' >> .env.production
-            echo 'LOG_LEVEL=info' >> .env.production
-            
-            # Create data directory
-            mkdir -p ./data
-            
-            # Build Docker image
-            docker build -t pitrain:latest .
-            
-            # Stop and remove existing container
-            docker stop pitrain_app 2>/dev/null || true
-            docker rm pitrain_app 2>/dev/null || true
-            
-            # Start new container
-            docker run -d \
-              --name pitrain_app \
-              --restart unless-stopped \
-              -p 3000:3000 \
-              --env-file .env.production \
-              -v "$(pwd)/data:/data" \
-              pitrain:latest
-              
-            # Wait for container to start
-            sleep 10
-            
-            # Test health endpoint
-            curl -f http://localhost:3000/health || {
-              echo "❌ Health check failed, checking logs:"
-              docker logs pitrain_app --tail 20
-              exit 1
-            }
-            
-            # Create NGINX config if it doesn't exist
-            if [ ! -f /etc/nginx/sites-enabled/pitrain.conf ]; then
-              echo 'Creating NGINX configuration...'
-              sudo bash -c 'cat > /etc/nginx/sites-enabled/pitrain.conf << END
-server {
-    listen 80;
-    server_name pitrain.waffelwurst.de;
-    return 301 https://$server_name$request_uri;
-}
-
-server {
-    listen 443 ssl http2;
-    server_name pitrain.waffelwurst.de;
-
-    ssl_certificate /etc/letsencrypt/live/waffelwurst.de/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/waffelwurst.de/privkey.pem;
-
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    location /api/ {
-        proxy_pass http://localhost:3000/api/;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        client_max_body_size 10M;
-    }
-}
-END'
-              
-              # Test and reload NGINX
-              sudo nginx -t && sudo systemctl reload nginx
-            fi
-            
-            echo '✅ Deployment complete'
-          "
+          # Wait for container to start
+          sleep 10
+          
+          # Test health endpoint
+          curl -f http://localhost:3000/health || {
+            echo "❌ Health check failed, checking logs:"
+            docker logs pitrain_app --tail 20
+            exit 1
+          }
+          
+          echo "✅ PitchTrainer deployed successfully!"
+          echo "📝 Manual step: Add NGINX config for pitrain.waffelwurst.de"
+          SCRIPT
+          
+          # Upload and execute deployment script
+          scp -i ~/.ssh/deploy_key deploy.sh $SERVER_USER@$SERVER_HOST:~/
+          ssh -i ~/.ssh/deploy_key $SERVER_USER@$SERVER_HOST "MISTRAL_API_KEY='$MISTRAL_API_KEY' bash ~/deploy.sh"
 
   verify:
     needs: deploy
@@ -169,15 +138,6 @@ END'
             echo "✅ Deployment successful! Health check passed."
           else
             echo "❌ Deployment verification failed. HTTP status: $response"
+            echo "ℹ️  This might be expected if NGINX config is not yet active"
             exit 1
-          fi
-          
-          # Check API endpoint
-          api_response=$(curl -s -o /dev/null -w "%{http_code}" https://pitrain.waffelwurst.de/api/statistics || echo "000")
-          
-          if [ "$api_response" = "200" ]; then
-            echo "✅ API endpoints responding correctly."
-          else
-            echo "⚠️  API endpoint check failed. HTTP status: $api_response"
-            # Don't fail the build for API issues
           fi
