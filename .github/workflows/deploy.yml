@@ -33,21 +33,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Deploy to IONOS Server
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.IONOS_SSH_PRIVATE_KEY }}
-          SERVER_HOST: ${{ secrets.IONOS_SERVER_HOST }}
-          SERVER_USER: ${{ secrets.IONOS_SSH_USER }}
-          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+      - name: Setup SSH key
         run: |
-          # Setup SSH
           mkdir -p ~/.ssh
-          echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H $SERVER_HOST >> ~/.ssh/known_hosts
+          echo "${{ secrets.IONOS_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.IONOS_SERVER_HOST }} >> ~/.ssh/known_hosts
           
-          # Create deployment script
-          cat > deploy.sh << 'SCRIPT'
+      - name: Deploy to IONOS Server
+        run: |
+          echo "🚀 Starting PitchTrainer deployment..."
+          
+          # Create deployment script (following MultiServer pattern)
+          cat << 'EOF' > deploy.sh
+          #!/bin/bash
           set -e
           echo "🚀 Starting PitchTrainer deployment..."
           
@@ -115,9 +114,18 @@ jobs:
           echo "📝 Manual step: Add NGINX config for pitrain.waffelwurst.de"
           SCRIPT
           
-          # Upload and execute deployment script
-          scp -i ~/.ssh/deploy_key deploy.sh $SERVER_USER@$SERVER_HOST:~/
-          ssh -i ~/.ssh/deploy_key $SERVER_USER@$SERVER_HOST "MISTRAL_API_KEY='$MISTRAL_API_KEY' bash ~/deploy.sh"
+          EOF
+          
+          chmod +x deploy.sh
+          
+          # Execute deployment on server (following MultiServer pattern)
+          ssh -o StrictHostKeyChecking=no ${{ secrets.IONOS_SSH_USER }}@${{ secrets.IONOS_SERVER_HOST }} 'MISTRAL_API_KEY="${{ secrets.MISTRAL_API_KEY }}" bash -s' < deploy.sh
+          
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f ~/.ssh/id_rsa
+          rm -f deploy.sh
 
   verify:
     needs: deploy
