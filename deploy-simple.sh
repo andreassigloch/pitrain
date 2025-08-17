@@ -13,8 +13,8 @@ cd ~/pitrain
 echo "📥 Pulling latest code..."
 git pull origin main
 
-# Build new image
-echo "🔨 Building Docker image..."
+# Build new image (with frontend)
+echo "🔨 Building Docker image (this includes frontend build)..."
 docker build -t pitrain:latest .
 
 # Stop old container
@@ -24,15 +24,9 @@ docker stop pitrain || true
 # Remove old container
 docker rm pitrain || true
 
-# Start new container
+# Start new container (IMPORTANT: name must be 'pitrain' for NGINX)
 echo "▶️  Starting new container..."
-docker run -d \
-  --name pitrain \
-  --restart unless-stopped \
-  --network waffelwurst_frontend \
-  --env-file .env.production \
-  -v "$(pwd)/data:/data" \
-  pitrain:latest
+docker run -d --name pitrain --restart unless-stopped --network waffelwurst_frontend --env-file .env.production -v "$(pwd)/data:/data" pitrain:latest
 
 # Wait for startup
 echo "⏳ Waiting for container to start..."
