@@ -20,7 +20,8 @@
       "Bash(gh workflow:*)",
       "WebFetch(domain:pitrain.waffelwurst.de)",
       "WebFetch(domain:waffelwurst.de)",
-      "Bash(npm run test:ci:*)"
+      "Bash(npm run test:ci:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": []
   }

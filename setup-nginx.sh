@@ -23,7 +23,8 @@ server {
 }
 
 server {
-    listen 443 ssl http2;
+    listen 443 ssl;
+    http2 on;
     server_name pitrain.waffelwurst.de;
 
     ssl_certificate /etc/nginx/ssl/certs/waffelwurst.de/fullchain.pem;
@@ -41,7 +42,7 @@ server {
         proxy_pass http://pitrain_app:3000/api/;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
-        proxy_Set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         client_max_body_size 10M;
     }
@@ -53,18 +54,18 @@ echo "🔄 Restarting MultiServer NGINX container..."
 
 # Restart the MultiServer NGINX container to pick up new config
 cd $MULTISERVER_DIR
-docker-compose restart nginx-proxy
+docker compose restart nginx-proxy
 
 # Wait for restart
 sleep 5
 
 # Test if NGINX container is running
-if docker-compose ps nginx-proxy | grep -q "Up"; then
+if docker compose ps nginx-proxy | grep -q "Up"; then
     echo "✅ MultiServer NGINX restarted successfully"
     echo "🌐 PitchTrainer should now be available at https://pitrain.waffelwurst.de"
     echo "📝 Make sure your PitchTrainer container is connected to waffelwurst_frontend network"
 else
     echo "❌ MultiServer NGINX restart failed"
-    echo "🔍 Check MultiServer logs: docker-compose logs nginx-proxy"
+    echo "🔍 Check MultiServer logs: cd $MULTISERVER_DIR && docker compose logs nginx-proxy"
     exit 1
 fi
