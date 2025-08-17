@@ -1,19 +1,40 @@
 # PitchTrainer Dockerfile
 # Author: andreas@siglochconsulting.com
 
-FROM node:18-alpine
+# Build stage
+FROM node:18-alpine AS builder
 
-# Create app directory
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install ALL dependencies (including dev) for building
+RUN npm ci
 
 # Copy application code
 COPY . .
+
+# Build the frontend
+RUN npm run build
+
+# Production stage
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install only production dependencies
+RUN npm ci --only=production
+
+# Copy server and source code
+COPY server.js ./
+COPY src ./src
+
+# Copy built frontend from builder stage
+COPY --from=builder /app/dist ./dist
 
 # Create data directory for SQLite
 RUN mkdir -p /data && chown -R node:node /data
