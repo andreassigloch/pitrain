@@ -53,15 +53,19 @@ class SpeechService {
   }
 
   setupMediaRecorder(stream) {
-    // Setup MediaRecorder for high-quality audio capture
+    // Setup MediaRecorder for Mistral API compatibility (MP3/WAV only)
+    // Prefer MP3 for smaller file size
     const options = {
-      mimeType: 'audio/webm;codecs=opus'
+      mimeType: 'audio/mp3'
     }
     
     if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-      options.mimeType = 'audio/webm'
+      options.mimeType = 'audio/mpeg'
       if (!MediaRecorder.isTypeSupported(options.mimeType)) {
         options.mimeType = 'audio/wav'
+        if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+          options.mimeType = 'audio/webm;codecs=opus'
+        }
       }
     }
 
@@ -198,7 +202,7 @@ class SpeechService {
       console.log('📤 Sending audio for transcription:', audioBlob.size, 'bytes')
       
       const formData = new FormData()
-      formData.append('audio', audioBlob, 'recording.webm')
+      formData.append('audio', audioBlob, 'recording.mp3')
 
       const response = await fetch('/api/transcribe', {
         method: 'POST',

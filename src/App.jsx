@@ -103,7 +103,7 @@ function App() {
             🎯 PitchTrainer
           </h1>
           <p className="text-gray-600 text-lg">
-            BNI Pitch Training mit KI-Feedback
+            BNI-Style Pitch Training
           </p>
         </div>
 
@@ -123,7 +123,8 @@ function App() {
               className="text-primary-600 hover:underline"
             >
               Open Source
-            </a>
+            </a>{' '}
+            • provided by siglochconsulting
           </p>
         </div>
       </div>

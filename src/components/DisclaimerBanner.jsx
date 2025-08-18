@@ -29,7 +29,6 @@ function DisclaimerBanner({ onAccept }) {
           <p>• Diese Anwendung verwendet experimentelle KI-Technologie</p>
           <p>• Audiodaten werden temporär an Mistral AI übertragen</p>
           <p>• Keine Garantie für Genauigkeit der Bewertungen</p>
-          <p>• Nur anonyme Statistiken werden gespeichert</p>
         </div>
       </div>
 
@@ -41,7 +40,6 @@ function DisclaimerBanner({ onAccept }) {
             <p><strong>Datenschutz:</strong></p>
             <p>• Keine Nutzer-Registrierung erforderlich</p>
             <p>• Keine permanente Speicherung von Audiodaten</p>
-            <p>• Anonyme Nutzungsstatistiken nur</p>
           </div>
         </div>
       </div>
