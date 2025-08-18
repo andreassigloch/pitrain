@@ -1,5 +1,6 @@
 #!/bin/bash
-# Simple deployment script for PitchTrainer
+# PitchTrainer MultiServer Deployment
+# Deploys to waffelwurst.de with NGINX proxy
 # Run this on the server to deploy updates
 
 set -e
