@@ -3,14 +3,14 @@ version: '3.8'
 services:
   pitrain:
     build: .
-    container_name: pitrain_app
+    container_name: pitrain
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=production
       - MISTRAL_API_KEY=${MISTRAL_API_KEY}
       - DATABASE_PATH=/data/pitrain.db
-      - ALLOWED_ORIGINS=https://pitrain.waffelwurst.de
+      - ALLOWED_ORIGINS=http://localhost:3000
       - MISTRAL_TRANSCRIPTION_MODEL=voxtral-mini-latest
       - MISTRAL_EVALUATION_MODEL=mistral-small-latest
       - MISTRAL_BASE_URL=https://api.mistral.ai/v1
@@ -22,16 +22,10 @@ services:
       - LOG_LEVEL=info
     volumes:
       - ./data:/data
-    networks:
-      - waffelwurst_frontend
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 60s
-
-networks:
-  waffelwurst_frontend:
-    external: true

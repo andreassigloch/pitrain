@@ -48,3 +48,6 @@ test-*.db
 *.wav
 *.mp3
 *.webm
+
+# Private deployment and configuration files
+private/

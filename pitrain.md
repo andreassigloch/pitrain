@@ -1,7 +1,70 @@
 # PitchTrainer Architecture
 
+## Making-of Pitrain
+
+Step1: Definition of Usecases and Constraints with claude code as core spec.
+Step2: Asking claude code for an Architecture based on Step1
+Step3: Tasking claude code to build and test the app based on iput of step 1+2
+Step4: deployment to the webserver is not doumented here, recommendation would be vercel because it could be handled 90% by claude code.
+
+  Core Original Spec (Lines 1-415):
+
+  1. User Story & Requirements (Lines 6-24)
+
+  - The actual business requirements
+  - Performance targets (< 200ms, < 5s)
+  - Interface requirements (self-explanatory, dual duration)
+  - Privacy constraints
+
+  2. Technology Stack (Lines 26-54)
+
+  - Frontend/Backend/Infrastructure choices
+  - AI model selection (Voxtral + Mistral)
+
+  3. Architecture Components (Lines 56-128)
+
+  - Hybrid Speech Recognition Module design
+  - Timer Module specification
+  - Evaluation Engine with KPI definitions
+  - Feedback Generator categories
+  - Data Persistence schema
+
+  4. System Flow (Lines 130-150)
+
+  - The mermaid diagram showing end-to-end flow
+
+  5. API Endpoints (Lines 152-165)
+
+  - The three core endpoints specification
+
+  6. UI/UX Mockups (Lines 318-415)
+
+  - ASCII art mockups of the interface
+  - Mobile responsive notes
+
+  What was ADDED LATER (not original):
+
+  Lines 167-295: Deployment/CI/CD sections
+
+  - Docker configuration
+  - GitHub Actions (later canceled)
+  - Environment variables
+  - NGINX configuration
+  - These were added during implementation, not original spec
+
+  Lines 416-509: Testing Strategy section
+
+  - 3-level testing approach
+  - Test scenarios
+  - CI/CD pipeline
+  - Added during development, not original requirement
+
+  The original spec was essentially a functional specification (what to build), while the
+  deployment and testing sections were implementation decisions (how to build/deploy it) added
+  later.
+
 ## Overview
-A web-based BNI pitch training application with German speech recognition, real-time evaluation, and AI-powered feedback using Mistral models. Deployed at pitrain.waffelwurst.de via automated CI/CD pipeline.
+A web-based BNI pitch training application with German speech recognition, real-time evaluation, and AI-powered feedback using Mistral models.
 
 ## User Story & Requirements
 
@@ -20,7 +83,7 @@ A web-based BNI pitch training application with German speech recognition, real-
 - **Mistral Models Only**: Use Voxtral-mini-2507 for transcription, Mistral-7B for evaluation
 - **Privacy First**: Store evaluation results and proposal types without user tracking
 - **Statistical Analysis**: Anonymous data collection for improvement pattern analysis
-- **Existing Infrastructure**: Deploy via GitHub Actions to pitrain.waffelwurst.de using MultiServer setup
+- **Deployment Flexibility**: Can be deployed to any Docker-capable hosting environment
 - **German Focus**: Optimized for German BNI presentations with automatic language detection
 
 ## Technology Stack
@@ -41,10 +104,9 @@ A web-based BNI pitch training application with German speech recognition, real-
 - **Container**: Docker with Alpine Linux base image
 
 ### Infrastructure
-- **Deployment**: Docker container via GitHub Actions
-- **Proxy**: NGINX reverse proxy (MultiServer infrastructure)
-- **Network**: waffelwurst_frontend Docker network
-- **SSL**: Wildcard certificate for *.waffelwurst.de
+- **Deployment**: Docker container
+- **Proxy**: Any reverse proxy (NGINX, Caddy, Traefik)
+- **SSL**: Standard HTTPS configuration
 
 ### AI Models
 - **Hybrid Speech Recognition**:
@@ -164,131 +226,49 @@ GET /api/statistics
   Response: { totalEvaluations: number, avgScores: KPIScores }
 ```
 
-## CI/CD & Deployment Configuration
+## Deployment Configuration
 
 ### Docker Configuration
-```dockerfile
-# Dockerfile
-FROM node:18-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --production
-COPY . .
-EXPOSE 3000
-CMD ["node", "server.js"]
-```
+See `Dockerfile` and `docker-compose.example.yml` in the project root for Docker deployment configuration.
 
-### Docker Compose Integration
-```yaml
-# docker-compose.yml addition for pitrain service
-services:
-  pitrain:
-    build: ./pitrain
-    container_name: pitrain_app
-    ports:
-      - "3000:3000"
-    environment:
-      - NODE_ENV=production
-      - MISTRAL_API_KEY=${MISTRAL_API_KEY}
-      - DATABASE_PATH=/data/pitrain.db
-    volumes:
-      - ./data:/data
-    networks:
-      - waffelwurst_frontend
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-```
+### Deployment Options
 
-### GitHub Actions Workflow
-```yaml
-# .github/workflows/deploy.yml
-name: Deploy PitchTrainer to IONOS
+1. **Docker Deployment**:
+   - Build: `docker build -t pitrain .`
+   - Run: `docker run -p 3000:3000 --env-file .env pitrain`
 
-on:
-  push:
-    branches: [main]
-  workflow_dispatch:
+2. **Docker Compose**:
+   - Copy `docker-compose.example.yml` to `docker-compose.yml`
+   - Configure environment variables
+   - Run: `docker-compose up -d`
 
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-      - run: npm ci
-      - run: npm test
-      - run: npm run build
+3. **Direct Node.js**:
+   - Build frontend: `npm run build`
+   - Start server: `npm start`
 
-  deploy:
-    needs: test
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Deploy to IONOS Server
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.IONOS_SSH_PRIVATE_KEY }}
-          SERVER_HOST: ${{ secrets.IONOS_SERVER_HOST }}
-          SERVER_USER: ${{ secrets.IONOS_SSH_USER }}
-        run: |
-          mkdir -p ~/.ssh
-          echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key \
-            $SERVER_USER@$SERVER_HOST << 'EOF'
-            cd ~/pitrain
-            git pull origin main
-            docker-compose build pitrain
-            docker-compose up -d pitrain
-            docker-compose exec nginx-proxy nginx -s reload
-          EOF
-
-  notify:
-    needs: deploy
-    runs-on: ubuntu-latest
-    if: always()
-    steps:
-      - name: Check Deployment
-        run: |
-          curl -f https://pitrain.waffelwurst.de/health || exit 1
-          echo "Deployment successful!"
-```
-
-### GitHub Secrets Required
-```
-IONOS_SSH_PRIVATE_KEY    # SSH private key for server access
-IONOS_SERVER_HOST        # Server IP (217.154.9.145)
-IONOS_SSH_USER          # SSH username (andreas)
-MISTRAL_API_KEY         # Mistral AI API key
-```
+4. **Platform Deployment**:
+   - Deploy to Vercel, Netlify, Railway, Render, etc.
+   - Configure environment variables in platform dashboard
 
 ### Environment Variables
 ```bash
-# .env.production
+# .env
 MISTRAL_API_KEY=<your-mistral-api-key>
 DATABASE_PATH=/data/pitrain.db
 PORT=3000
 NODE_ENV=production
-ALLOWED_ORIGINS=https://pitrain.waffelwurst.de
+ALLOWED_ORIGINS=<your-domain-or-localhost>
 ```
 
-### NGINX Configuration (Already in MultiServer)
-The NGINX configuration is already set up in MultiServer at:
-`/nginx/sites-enabled/20-pitrain.conf`
-
-When deploying, uncomment the proxy_pass sections in the NGINX config:
+### Reverse Proxy Configuration (Optional)
+If using a reverse proxy like NGINX:
 ```nginx
-location /api/ {
-    proxy_pass http://pitrain:3000/api/;
-    # ... rest of config
+location / {
+    proxy_pass http://localhost:3000;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
 }
 ```
 
@@ -472,7 +452,7 @@ location /api/ {
 - **End-to-end user flows**: Complete pitch recording → evaluation → results → clipboard export
 - **Database persistence**: Real SQLite file operations with anonymous statistics storage
 - **Privacy compliance**: Verify no user tracking data is stored
-- **Deployment health checks**: Live endpoint validation at pitrain.waffelwurst.de
+- **Deployment health checks**: Live endpoint validation
 - **Mobile device performance**: Real device testing with touch interactions
 
 ### Test Execution Strategy
@@ -558,40 +538,5 @@ test('mobile_usability_requirements', () => {
 });
 ```
 
-### Continuous Integration Pipeline
-
-```yaml
-# .github/workflows/test.yml
-name: Test Pipeline
-
-on: [push, pull_request]
-
-jobs:
-  unit-tests:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - run: npm ci
-      - run: npm run test:unit
-      
-  integration-tests:
-    needs: unit-tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - run: npm ci
-      - run: npm run test:integration
-      
-  system-validation:
-    needs: integration-tests
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - uses: actions/checkout@v3
-      - run: npm ci
-      - run: npm run test:system
-        env:
-          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
-```
 
 This testing strategy ensures quality at every level while maintaining fast feedback loops for developers and comprehensive validation before deployment.
