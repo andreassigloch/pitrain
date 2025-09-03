@@ -7,10 +7,8 @@ import React, { useState } from 'react'
 import DurationSelector from './components/DurationSelector'
 import RecordingInterface from './components/RecordingInterface'
 import ResultsDisplay from './components/ResultsDisplay'
-import DisclaimerBanner from './components/DisclaimerBanner'
 
 const AppState = {
-  DISCLAIMER: 'disclaimer',
   DURATION_SELECT: 'duration_select',
   RECORDING: 'recording',
   PROCESSING: 'processing', 
@@ -18,14 +16,10 @@ const AppState = {
 }
 
 function App() {
-  const [appState, setAppState] = useState(AppState.DISCLAIMER)
+  const [appState, setAppState] = useState(AppState.DURATION_SELECT)
   const [selectedDuration, setSelectedDuration] = useState(null)
   const [evaluationResult, setEvaluationResult] = useState(null)
   const [transcript, setTranscript] = useState('')
-
-  const handleDisclaimerAccept = () => {
-    setAppState(AppState.DURATION_SELECT)
-  }
 
   const handleDurationSelect = (duration) => {
     setSelectedDuration(duration)
@@ -51,9 +45,6 @@ function App() {
 
   const renderCurrentView = () => {
     switch (appState) {
-      case AppState.DISCLAIMER:
-        return <DisclaimerBanner onAccept={handleDisclaimerAccept} />
-      
       case AppState.DURATION_SELECT:
         return <DurationSelector onDurationSelect={handleDurationSelect} />
       

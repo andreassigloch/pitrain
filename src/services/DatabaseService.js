@@ -152,18 +152,66 @@ class DatabaseService {
 
   async getStatistics() {
     try {
-      const totalEvaluations = await this.getQuery(
+      const totalCount = await this.getQuery(
         'SELECT COUNT(*) as count FROM evaluations'
       );
 
-      const avgScores = await this.getQuery(`
-        SELECT 
-          AVG(overall_score) as avg_overall,
-          AVG(word_count) as avg_words,
-          duration
-        FROM evaluations 
-        GROUP BY duration
+      // Calculate KPI averages from JSON data
+      const evaluations = await this.allQuery(`
+        SELECT kpi_scores, overall_score FROM evaluations
       `);
+
+      let avgScores = {
+        call_to_action: 0,
+        structure_time: 0,
+        content_clarity: 0,
+        memorability: 0
+      };
+
+      let avgOverallScore = 0;
+
+      if (evaluations.length > 0) {
+        let categoryTotals = {
+          call_to_action: [],
+          structure_time: [],
+          content_clarity: [],
+          memorability: []
+        };
+
+        evaluations.forEach(evaluation => {
+          // Parse KPI scores JSON
+          let kpis;
+          try {
+            kpis = typeof evaluation.kpi_scores === 'string' 
+              ? JSON.parse(evaluation.kpi_scores) 
+              : evaluation.kpi_scores;
+          } catch (e) {
+            return; // Skip invalid JSON
+          }
+
+          // Calculate category averages
+          Object.keys(categoryTotals).forEach(category => {
+            if (kpis && kpis[category]) {
+              const categoryScores = Object.values(kpis[category]);
+              const categoryAvg = categoryScores.reduce((sum, score) => sum + score, 0) / categoryScores.length;
+              categoryTotals[category].push(categoryAvg);
+            }
+          });
+
+          if (evaluation.overall_score) {
+            avgOverallScore += evaluation.overall_score;
+          }
+        });
+
+        // Calculate final averages
+        Object.keys(avgScores).forEach(category => {
+          if (categoryTotals[category].length > 0) {
+            avgScores[category] = categoryTotals[category].reduce((sum, score) => sum + score, 0) / categoryTotals[category].length;
+          }
+        });
+
+        avgOverallScore = avgOverallScore / evaluations.length;
+      }
 
       const recentEvaluations = await this.allQuery(`
         SELECT duration, overall_score, word_count, timestamp 
@@ -180,8 +228,9 @@ class DatabaseService {
       `);
 
       return {
-        totalEvaluations: totalEvaluations?.count || 0,
-        avgScores: avgScores || null,
+        total_count: totalCount?.count || 0,
+        avg_scores: avgScores,
+        avg_overall_score: avgOverallScore,
         recentEvaluations,
         proposalStats,
         lastUpdated: new Date().toISOString()

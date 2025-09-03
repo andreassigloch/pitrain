@@ -90,6 +90,44 @@ function DurationSelector({ onDurationSelect }) {
           <div>• Einprägsamen Slogan verwenden</div>
         </div>
       </div>
+
+      {/* Disclaimer */}
+      <div className="border-t-2 border-yellow-300 bg-yellow-50 rounded-lg p-4 max-w-2xl mx-auto">
+        <div className="flex items-start space-x-2">
+          <span className="text-2xl">⚠️</span>
+          <div className="text-sm text-gray-700">
+            <p className="font-semibold mb-1">Wichtiger Hinweis</p>
+            <p>Keine Gewähr für Funktion oder Datenschutz. Nutzung auf eigenes Risiko.</p>
+            <details className="mt-2">
+              <summary className="cursor-pointer text-primary-600 hover:text-primary-700">
+                Mehr Details ↓
+              </summary>
+              <div className="mt-3 space-y-2 text-gray-600">
+                <p className="font-semibold">Diese Anwendung:</p>
+                <ul className="list-disc list-inside space-y-1 ml-2">
+                  <li>Speichert anonyme Statistiken</li>
+                  <li>Nutzt Mistral AI zur Auswertung</li>
+                  <li>Überträgt Audio-Aufnahmen zur Transkription an Mistral API</li>
+                  <li>Speichert KEINE persönlichen Daten oder Nutzerprofile</li>
+                  <li>Verwendet Cookies nur für Session-Management</li>
+                </ul>
+                <p className="mt-3">
+                  <span className="font-semibold">Ihre Aufnahmen werden:</span>
+                </p>
+                <ul className="list-disc list-inside space-y-1 ml-2">
+                  <li>Nur für die Analyse verwendet</li>
+                  <li>Nicht dauerhaft gespeichert</li>
+                  <li>Anonymisiert verarbeitet</li>
+                </ul>
+                <p className="mt-3 font-medium">
+                  Mit der Nutzung der Pitch-Buttons akzeptieren Sie diese Bedingungen.
+                </p>
+                <p className="mt-2 text-xs">© 2024 Sigloch Consulting</p>
+              </div>
+            </details>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

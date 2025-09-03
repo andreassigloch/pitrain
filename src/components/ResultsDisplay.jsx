@@ -3,10 +3,13 @@
  * Author: andreas@siglochconsulting.com
  */
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import axios from 'axios'
 
 function ResultsDisplay({ result, transcript, duration, onStartOver }) {
   const [copied, setCopied] = useState(false)
+  const [statistics, setStatistics] = useState(null)
+  const [showStatistics, setShowStatistics] = useState(false)
 
   const categoryLabels = {
     call_to_action: 'Call-to-Action',
@@ -20,6 +23,20 @@ function ResultsDisplay({ result, transcript, duration, onStartOver }) {
     structure_time: 25,
     content_clarity: 20,
     memorability: 15
+  }
+
+  // Load statistics when component mounts
+  useEffect(() => {
+    loadStatistics()
+  }, [])
+
+  const loadStatistics = async () => {
+    try {
+      const response = await axios.get('/api/statistics')
+      setStatistics(response.data)
+    } catch (error) {
+      console.error('Failed to load statistics:', error)
+    }
   }
 
   const proposalTypeLabels = {
@@ -228,10 +245,70 @@ Erstellt mit PitchTrainer • https://pitrain.waffelwurst.de`
         </button>
       </div>
 
-      {/* Performance Info */}
-      <div className="text-center text-xs text-gray-400 space-y-1">
-        <p>Powered by Mistral AI • Voxtral Transcription • {result.model_used}</p>
-        <p>Transkription + Bewertung: {result.processing_time + (result.evaluation_time || 0)}ms</p>
+      {/* Statistics Section */}
+      <div className="border-t pt-6 mt-8">
+        <div 
+          className="cursor-pointer text-center"
+          onClick={() => setShowStatistics(!showStatistics)}
+        >
+          <p className="text-gray-600 font-medium">
+            {showStatistics ? '↑ Statistik ausblenden' : '↓ Statistik anzeigen'}
+          </p>
+        </div>
+        
+        {showStatistics && statistics && (
+          <div className="mt-6 bg-gray-50 rounded-lg p-6 space-y-6">
+            <div className="text-center">
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                📈 STATISTIK
+              </h3>
+              <p className="text-lg text-gray-700">
+                Trainings gesamt: <span className="font-bold">{statistics.total_count || 0}</span>
+              </p>
+            </div>
+
+            {statistics.avg_scores && (
+              <>
+                <div className="border-t pt-4">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4">
+                    Durchschnittswerte aller Trainings:
+                  </h4>
+                  
+                  <div className="space-y-3">
+                    {Object.keys(categoryLabels).map((category) => {
+                      const avgScore = Math.round(statistics.avg_scores[category] || 0)
+                      
+                      return (
+                        <div key={category} className="flex items-center justify-between">
+                          <span className="text-gray-700">{categoryLabels[category]}</span>
+                          <div className="flex items-center space-x-2">
+                            <div className="w-32 bg-gray-200 rounded-full h-2">
+                              <div 
+                                className={`h-2 rounded-full ${getBarColor(avgScore)}`}
+                                style={{ width: `${avgScore}%` }}
+                              />
+                            </div>
+                            <span className={`font-medium ${getScoreColor(avgScore)} min-w-[60px] text-right`}>
+                              {avgScore}/100
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                <div className="border-t pt-4 text-center">
+                  <p className="text-lg text-gray-700">
+                    ⌀ Gesamt-Score: <span className={`font-bold ${getScoreColor(statistics.avg_overall_score || 0)}`}>
+                      {Math.round(statistics.avg_overall_score || 0)}/100
+                    </span>
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

@@ -171,13 +171,21 @@ Transcribed Text → Mistral API → Structured Analysis → KPI Scores
 KPI Scores + Transcript → Mistral API → Improvement Proposals
 ```
 
-**Focused Improvement Categories:**
-- `CTA_SPECIFICITY`: Make your referral ask more specific
-- `CTA_CLARITY`: Tell people exactly how to help you
-- `STRUCTURE_BASICS`: Add missing intro/outro elements
-- `SIMPLIFY_MESSAGE`: Remove jargon, focus on one service
-- `ADD_MEMORY_HOOK`: Create a memorable tagline or slogan
-- `TIME_OPTIMIZATION`: Adjust content length for time limit
+The feedback generator analyzes the KPI scores and transcript to generate specific, actionable improvement proposals. These proposals are categorized by type for consistent tracking and are limited to a maximum of 3 per evaluation to maintain focus.
+
+**Proposal Generation Process:**
+- Identifies the lowest-scoring KPI categories
+- Generates specific, actionable recommendations
+- Assigns priority levels (HIGH/MEDIUM/LOW) based on impact
+- Links proposals to the underlying KPI categories for tracking
+
+**Common Improvement Proposal Types:**
+- `CTA_SPECIFICITY`: Improve referral ask specificity (targets Call-to-Action KPIs)
+- `CTA_CLARITY`: Clarify contact methods (targets Call-to-Action KPIs)
+- `STRUCTURE_BASICS`: Enhance intro/outro elements (targets Structure & Time KPIs)
+- `SIMPLIFY_MESSAGE`: Reduce jargon, focus message (targets Content Clarity KPIs)
+- `ADD_MEMORY_HOOK`: Add memorable tagline/hook (targets Memorability KPIs)
+- `TIME_OPTIMIZATION`: Optimize content for time limit (targets Structure & Time KPIs)
 
 ### 5. Data Persistence
 ```
@@ -189,11 +197,33 @@ SQLite Database Schema:
 - No user tracking or personal data storage
 - Anonymous statistical aggregation only
 
+### 6. Statistics Module
+```
+Database → Aggregate Calculations → Display on Results Page
+```
+
+**Statistics Features:**
+- **Training Count**: Total number of completed pitch trainings
+- **KPI Averages**: Mean scores for the 4 displayed evaluation criteria:
+  - Call-to-Action
+  - Struktur & Zeit
+  - Klarheit
+  - Merkbarkeit
+- **Overall Average**: Combined average score across all trainings
+- **Real-time Updates**: Statistics update immediately after each training session
+
+**Implementation Details:**
+- Statistics calculated server-side from SQLite database
+- Cached for performance (5-minute cache duration)
+- Accessible via `/api/stats` endpoint
+- Displayed as scrollable extension on results screen
+- Updates happen asynchronously to not delay result display
+
 ## System Flow
 
 ```mermaid
 graph TD
-    A[User Opens App] --> B[Disclaimer Display]
+    A[User Opens App] --> B[Duration Selection with Disclaimer]
     B --> C[Select Duration: 45s/60s]
     C --> D[Start Recording]
     D --> E[Dual Processing:]
@@ -208,7 +238,9 @@ graph TD
     M --> N[Generate KPIs & Feedback]
     N --> O[Display Results]
     O --> P[Copy to Clipboard Option]
+    O --> R[Load Statistics Data]
     P --> Q[Store Anonymous Stats]
+    R --> S[Display Statistics on Scroll]
 ```
 
 ## API Endpoints
@@ -297,25 +329,74 @@ location / {
 
 ## User Interface Mockup
 
-### Initial Screen
+### Initial Screen (Mobile-First, ohne Scrollen)
 ```
 ╔═══════════════════════════════════════╗
-║           🎯 PitchTrainer             ║
-╠═══════════════════════════════════════╣
 ║                                       ║
-║  ⚠️  Keine Gewähr für Funktion oder   ║
-║      Datenschutz. Nutzung auf         ║
-║      eigenes Risiko.                  ║
+║        🎯 PitchTrainer                ║
 ║                                       ║
-║ ┌─────────────────────────────────────┐ ║
-║ │    Wähle deine Pitch-Dauer:        │ ║
-║ │                                     │ ║
-║ │  ┏━━━━━━━━━━━┓  ┏━━━━━━━━━━━━━━━━━━┓ │ ║
-║ │  ┃   45s    ┃  ┃      60s       ┃ │ ║
-║ │  ┃   BNI    ┃  ┃   Elevator     ┃ │ ║
-║ │  ┗━━━━━━━━━━━┛  ┗━━━━━━━━━━━━━━━━━━┛ │ ║
-║ └─────────────────────────────────────┘ ║
+║   BNI Pitch Training mit KI-Power     ║
 ║                                       ║
+║ ───────────────────────────────────── ║
+║                                       ║
+║   Wähle deine Pitch-Dauer:           ║
+║                                       ║
+║  ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓  ║
+║  ┃                                 ┃  ║
+║  ┃      ⏱️  45 SEKUNDEN           ┃  ║
+║  ┃                                 ┃  ║
+║  ┃      Elevator Pitch            ┃  ║
+║  ┃                                 ┃  ║
+║  ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛  ║
+║                                       ║
+║  ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓  ║
+║  ┃                                 ┃  ║
+║  ┃      ⏱️  60 SEKUNDEN           ┃  ║
+║  ┃                                 ┃  ║
+║  ┃      Vorstellungsrunde         ┃  ║
+║  ┃                                 ┃  ║
+║  ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛  ║
+║                                       ║
+║ ═══════════════════════════════════   ║
+║ ⚠️  Wichtiger Hinweis                 ║
+║ Keine Gewähr für Funktion oder        ║
+║ Datenschutz. Nutzung auf eigenes      ║
+║ Risiko.                               ║
+║         ↓ Mehr Details ↓              ║
+╚═══════════════════════════════════════╝
+     [Viewport Ende - Scroll möglich]
+```
+
+### Disclaimer (Nach Scrollen sichtbar)
+```
+╔═══════════════════════════════════════╗
+║ ═══════════════════════════════════   ║
+║ ⚠️  RECHTLICHER HINWEIS               ║
+║                                       ║
+║ Keine Gewähr für Funktion oder        ║
+║ Datenschutz. Nutzung auf eigenes      ║
+║ Risiko.                               ║
+║                                       ║
+║ Diese Anwendung:                      ║
+║ • Speichert anonyme Statistiken       ║
+║ • Nutzt Mistral AI zur Auswertung     ║
+║ • Überträgt Audio-Aufnahmen zur       ║
+║   Transkription an Mistral API        ║
+║ • Speichert KEINE persönlichen        ║
+║   Daten oder Nutzerprofile            ║
+║ • Verwendet Cookies nur für           ║
+║   Session-Management                  ║
+║                                       ║
+║ Ihre Aufnahmen werden:                ║
+║ • Nur für die Analyse verwendet       ║
+║ • Nicht dauerhaft gespeichert         ║
+║ • Anonymisiert verarbeitet            ║
+║                                       ║
+║ Mit der Nutzung der Pitch-Buttons     ║
+║ akzeptieren Sie diese Bedingungen.    ║
+║                                       ║
+║ © 2024 Sigloch Consulting             ║
+║ ═══════════════════════════════════   ║
 ╚═══════════════════════════════════════╝
 ```
 
@@ -349,7 +430,7 @@ location / {
 ╚═══════════════════════════════════════╝
 ```
 
-### Results Screen
+### Results Screen (Mobile-First, ohne Scrollen)
 ```
 ╔═══════════════════════════════════════╗
 ║           🎯 PitchTrainer             ║
@@ -383,6 +464,34 @@ location / {
 ║ ┃ 📋 KOPIEREN     ┃ ┃ 🔄 NOCHMAL     ┃ ║
 ║ ┗━━━━━━━━━━━━━━━━━━┛ ┗━━━━━━━━━━━━━━━━━┛ ║
 ║                                       ║
+║ ───────────────────────────────────── ║
+║         ↓ Statistik ↓                 ║
+╚═══════════════════════════════════════╝
+     [Viewport Ende - Scroll möglich]
+```
+
+### Statistik (Nach Scrollen sichtbar)
+```
+╔═══════════════════════════════════════╗
+║ ═══════════════════════════════════   ║
+║ 📈 STATISTIK                          ║
+║                                       ║
+║ Trainings gesamt: 127                 ║
+║                                       ║
+║ ───────────────────────────────────── ║
+║                                       ║
+║ Durchschnittswerte aller Trainings:   ║
+║                                       ║
+║ Call-to-Action    ██████░░░░  65/100  ║
+║ Struktur & Zeit   ██████░░░░  68/100  ║
+║ Klarheit         ███████░░░  72/100  ║
+║ Merkbarkeit      █████░░░░░  54/100  ║
+║                                       ║
+║ ───────────────────────────────────── ║
+║                                       ║
+║ ⌀ Gesamt-Score: 65/100                ║
+║                                       ║
+║ ═══════════════════════════════════   ║
 ╚═══════════════════════════════════════╝
 ```
 
