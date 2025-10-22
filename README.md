@@ -24,7 +24,7 @@ The initial spec was elaborated with claude code and stored in pitrain.md as inp
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/pitrain.git
+git clone https://github.com/andreassigloch/pitrain
 cd pitrain
 
 # Install dependencies
@@ -40,7 +40,7 @@ cp .env.example .env
 npm run dev
 ```
 
-### Docker Deployment
+### Docker Deployment (Local Development)
 
 ```bash
 # Using Docker Compose
@@ -51,6 +51,61 @@ docker-compose up -d
 docker build -t pitrain .
 docker run -p 3000:3000 --env-file .env pitrain
 ```
+
+## Production Deployment
+
+PitchTrainer is deployed on the Waffelwurst server using the MultiServer NGINX infrastructure.
+
+**Live URL:** https://pitrain.waffelwurst.de
+
+### Prerequisites
+
+**SSH Configuration:**
+See [MultiServer SSH-SETUP.md](../MultiServer/MultiServer/SSH-SETUP.md) for complete SSH setup instructions.
+
+**Quick Reference:**
+- **SSH Alias:** `ionos-aise`
+- **Deployment Directory:** `~/pitrain`
+- **Container Name:** `pitrain` (required for NGINX routing)
+- **Network:** `waffelwurst_frontend` (external, managed by MultiServer)
+
+### Deployment Process
+
+**From Your Local Machine:**
+```bash
+# 1. Push code to GitHub
+git add .
+git commit -m "Your changes"
+git push origin main
+
+# 2. SSH to server
+ssh ionos-aise
+
+# 3. Deploy updates
+cd ~/pitrain
+./private/deploy-multiserver.sh
+```
+
+**Deployment Script Includes:**
+- Git pull from GitHub
+- Frontend build (React + Vite)
+- Docker image build
+- Container restart with health checks
+
+### Verification
+
+```bash
+# Check container status
+ssh ionos-aise "docker ps | grep pitrain"
+
+# View logs
+ssh ionos-aise "docker logs pitrain --tail 50"
+
+# Test health endpoint
+curl https://pitrain.waffelwurst.de/health
+```
+
+**See:** [private/DEPLOYMENT-MULTISERVER.md](private/DEPLOYMENT-MULTISERVER.md) for detailed deployment documentation and troubleshooting.
 
 ## Documentation
 
