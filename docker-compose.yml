@@ -1,0 +1,30 @@
+services:
+  pitrain:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: pitrain:latest
+    container_name: pitrain
+    labels:
+      # Picked up by the autoheal sidecar (see docker-compose.yml in the AiSE
+      # project on the same VPS — one autoheal instance covers all containers
+      # on the docker daemon). Without this label, autoheal ignores the
+      # container even if its healthcheck fails.
+      - autoheal=true
+    expose:
+      - "3000"
+    env_file:
+      - .env.production
+    volumes:
+      - ./data:/data
+    restart: unless-stopped
+    # Healthcheck is inherited from the Dockerfile (HEALTHCHECK directive).
+    # Re-declare here only if you need to override interval/timeout.
+    networks:
+      - waffelwurst_frontend
+
+networks:
+  waffelwurst_frontend:
+    external: true
+    # Created by the MultiServer project's NGINX setup. If missing on a fresh
+    # host: docker network create waffelwurst_frontend
