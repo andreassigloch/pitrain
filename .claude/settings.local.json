@@ -24,8 +24,25 @@
       "Bash(npm run build:*)",
       "Bash(cat:*)",
       "Bash(curl:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "mcp__puppeteer__puppeteer_screenshot",
+      "mcp__puppeteer__puppeteer_evaluate",
+      "mcp__puppeteer__puppeteer_click",
+      "Bash(node:*)",
+      "Bash(pkill:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)",
+      "Bash(echo:*)",
+      "Bash(ssh root@waffelwurst.de \"cat ~/pitrain/.env.production 2>/dev/null | grep MISTRAL_API_KEY | head -c 30 || echo ''File not found''\")",
+      "Bash(ssh andreas@waffelwurst.de \"cat ~/pitrain/.env.production 2>/dev/null | grep MISTRAL_API_KEY | cut -c1-30 || echo ''File not found''\")",
+      "Bash(dig:*)",
+      "Bash(ssh ionos-aise:*)",
+      "Bash(scp:*)",
+      "Bash(git commit:*)"
     ],
-    "deny": []
+    "deny": [],
+    "additionalDirectories": [
+      "/private/tmp/pitrain-test"
+    ]
   }
 }
